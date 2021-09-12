@@ -11,16 +11,15 @@ from transformers import DistilBertTokenizerFast
 from transformers import TFDistilBertForSequenceClassification
 import os
 
-def read_or_create_split(split):
+def read_or_create_split(split, force_generate=False):
 
     if split == 'train':
         file = 'data/train.csv'
     else:
         file = 'data/test.csv'
 
-    if os.path.isfile(file):
-        return pd.read_csv(file)
-    else:
+    if not os.path.isfile(file) or force_generate:
+
         print('crating splits train and test')
         fake = pd.read_csv('data/Fake.csv')[['text']]
         real = pd.read_csv('data/Real.csv')[['text']]
@@ -31,12 +30,12 @@ def read_or_create_split(split):
         fake['label'] = 1
         real['label'] = 0
 
-        fake = fake.dropna(subset=['text'])
-        real = real.dropna(subset=['text'])
-
         # remove source from real for same structure as fake
         real.loc[:, 'text'] = real.text.str.split('-').str[1:].str.join(' ').str.lower()
         fake.loc[:, 'text'] = fake.text.str.lower()
+
+        fake = fake.dropna()
+        real = real.dropna()
 
         data = pd.concat([fake, real], axis=0).sample(frac=1)
         # split into train, val, test
@@ -44,13 +43,13 @@ def read_or_create_split(split):
         print('Train samples: ', len(train_data))
         print('Test samples: ', len(test_data))
         # save files
-        train_data.to_csv('data/train.csv', index=False)
-        test_data.to_csv('data/test.csv', index=False)
+        if split == 'train': train_data.to_csv(file, index=False)
+        elif split == 'test': test_data.to_csv(file, index=False)
 
-        return pd.read_csv(file)
+    return pd.read_csv(file)
 
-train_data = read_or_create_split('train')
-test_data = read_or_create_split('test')
+train_data = read_or_create_split('train', force_generate=True)
+test_data = read_or_create_split('test', force_generate=True)
 
 tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
 
