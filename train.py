@@ -34,8 +34,8 @@ def read_or_create_split(split, force_generate=False):
         real.loc[:, 'text'] = real.text.str.split('-').str[1:].str.join(' ').str.lower()
         fake.loc[:, 'text'] = fake.text.str.lower()
 
-        fake = fake.dropna()
-        real = real.dropna()
+        fake = fake.dropna().drop_duplicates()
+        real = real.dropna().drop_duplicates()
 
         data = pd.concat([fake, real], axis=0).sample(frac=1)
         # split into train, val, test
@@ -43,13 +43,13 @@ def read_or_create_split(split, force_generate=False):
         print('Train samples: ', len(train_data))
         print('Test samples: ', len(test_data))
         # save files
-        if split == 'train': train_data.to_csv(file, index=False)
-        elif split == 'test': test_data.to_csv(file, index=False)
+        train_data.to_csv('data/train.csv', index=False)
+        test_data.to_csv('data/test.csv', index=False)
 
     return pd.read_csv(file)
 
-train_data = read_or_create_split('train', force_generate=True)
-test_data = read_or_create_split('test', force_generate=True)
+train_data = read_or_create_split('train')
+test_data = read_or_create_split('test')
 
 tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
 
