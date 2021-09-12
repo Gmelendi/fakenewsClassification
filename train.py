@@ -9,33 +9,48 @@ import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from transformers import DistilBertTokenizerFast
 from transformers import TFDistilBertForSequenceClassification
+import os
 
-fake = pd.read_csv('data/Fake.csv')[['text']]
-real = pd.read_csv('data/Real.csv')[['text']]
-print('Original shape: Fake', fake.shape)
-print('Original shape: Real', real.shape)
+def read_or_create_split(split):
 
-# create labels
-fake['label'] = 1
-real['label'] = 0
+    if split == 'train':
+        file = 'data/train.csv'
+    else:
+        file = 'data/test.csv'
 
-fake = fake.dropna(subset=['text'])
-real = real.dropna(subset=['text'])
+    if os.path.isfile(file):
+        return pd.read_csv(file)
+    else:
+        print('crating splits train and test')
+        fake = pd.read_csv('data/Fake.csv')[['text']]
+        real = pd.read_csv('data/Real.csv')[['text']]
+        print('Original shape: Fake', fake.shape)
+        print('Original shape: Real', real.shape)
 
-# remove source from real for same structure as fake
-real.loc[:, 'text'] = real.text.str.split('-').str[1:].str.join(' ').str.lower()
-fake.loc[:, 'text'] = fake.text.str.lower()
+        # create labels
+        fake['label'] = 1
+        real['label'] = 0
 
-data = pd.concat([fake, real], axis=0).sample(frac=1)
-# split into train, val, test
-train_data, test_data = train_test_split(data, test_size=.1, random_state=99)
-# train_data, test_data = train_test_split(train_data, test_size=.1, random_state=99)
-print('Train samples: ', len(train_data))
-print('Test samples: ', len(test_data))
-# save files
-train_data.to_csv('data/train.csv', index=False)
-test_data.to_csv('data/test.csv', index=False)
+        fake = fake.dropna(subset=['text'])
+        real = real.dropna(subset=['text'])
 
+        # remove source from real for same structure as fake
+        real.loc[:, 'text'] = real.text.str.split('-').str[1:].str.join(' ').str.lower()
+        fake.loc[:, 'text'] = fake.text.str.lower()
+
+        data = pd.concat([fake, real], axis=0).sample(frac=1)
+        # split into train, val, test
+        train_data, test_data = train_test_split(data, test_size=.1, random_state=99)
+        print('Train samples: ', len(train_data))
+        print('Test samples: ', len(test_data))
+        # save files
+        train_data.to_csv('data/train.csv', index=False)
+        test_data.to_csv('data/test.csv', index=False)
+
+        return pd.read_csv(file)
+
+train_data = read_or_create_split('train')
+test_data = read_or_create_split('test')
 
 tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
 
